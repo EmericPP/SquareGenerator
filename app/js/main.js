@@ -1,40 +1,37 @@
-let canvas = document.getElementById('test-canvas');
-let ctx = canvas.getContext('2d');
-ctx.canvas.width  = window.innerWidth;
-ctx.canvas.height = window.innerHeight;
+let canvas = document.getElementById('test-canvas')
+let ctx = canvas.getContext('2d')
+ctx.canvas.width  = window.innerWidth
+ctx.canvas.height = window.innerHeight
 
+//Utils functions
 const getRandomColor = () => {
-    let letters = '0123456789ABCDEF';
-    let color = '#';
+    let letters = '0123456789ABCDEF'
+    let color = '#'
     for (let i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 16)];
+        color += letters[Math.floor(Math.random() * 16)]
     }
-    return color;
+    return color
 }
 
 const drawRect = (x, y, width, height, color) => {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, width, height);
+    ctx.fillStyle = color
+    ctx.fillRect(x, y, width, height)
 }
 
 
-let drawingMode = {active: false, downPos: {x: 0, y: 0}, color: 'black'};
-let rects = [];
-
-
-
-
+let drawingMode = {active: false, downPos: {x: 0, y: 0}, color: 'black'}
+let rects = []
 
 const mouseDown = (e) => {
-    drawingMode.active = true;
-    drawingMode.downPos.x = e.clientX;
-    drawingMode.downPos.y = e.clientY;
-    drawingMode.color = getRandomColor();
+    drawingMode.active = true
+    drawingMode.downPos.x = e.clientX
+    drawingMode.downPos.y = e.clientY
+    drawingMode.color = getRandomColor()
 }
 
 const mouseMove = (e) => {
     if(drawingMode.active) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
 
         rects.forEach((rect) => drawRect(rect.x, rect.y, rect.width, rect.height, rect.color))
         drawRect(
@@ -49,7 +46,7 @@ const mouseMove = (e) => {
 
 const mouseUp = (e) => {
     if(drawingMode.active) {
-        // square's origin (x;Y) can be equal to mouseUp position or mouseDown position
+        // square's origin (X;Y) can be equal to mouseUp position or mouseDown position
         let squareWidth = e.clientX - drawingMode.downPos.x,
             squareHeight = e.clientY - drawingMode.downPos.y,
             originPosX = squareWidth > 0 ? drawingMode.downPos.x : e.clientX,
@@ -66,46 +63,51 @@ const mouseUp = (e) => {
             })
         }
     }
-    drawingMode.active = false;
+    drawingMode.active = false
 
 }
 
-const rotateAndDelete = (e) => {
+const mouseDblClick = (e) => {
 
-
+    // get selected indexes
     let clickedSquareIndexes = []
-    const selectedSquares = rects.filter((rect, index) => {
-        const ifClickInsideSquare = (e.clientX > rect.x) && (e.clientX < rect.x + rect.width) && (rect.y < e.clientY) && (e.clientY < rect.y + rect.height)
-        if(ifClickInsideSquare) {
+    rects.forEach((rect, index) => {
+        if((e.clientX > rect.x) && (e.clientX < rect.x + rect.width) && (rect.y < e.clientY) && (e.clientY < rect.y + rect.height)) {
             clickedSquareIndexes.push(index)
         }
-        return ifClickInsideSquare
     })
 
+    // if there are stacking of squares under click position. we search the square over the other, so the last in filtered array
     const selectedIndex = clickedSquareIndexes[clickedSquareIndexes.length - 1]
-    const selectedSquare = selectedSquares[selectedSquares.length - 1]
 
 
     if(selectedIndex !== undefined) {
         rects[selectedIndex].rotation = 0
-        animate(selectedSquare, selectedIndex)
+        animateRotationAndDelete(selectedIndex)
     }
 }
 
-function animate(selectedSquare, selectedIndex){
+const animateRotationAndDelete = (selectedIndex) => {
 
+    // recursive function will be called as long as the rotation is turning
     if(rects[selectedIndex].rotation <= 360) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // clear all canvas, redraw registred shape's, and draw shape with during rotation
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
         rects.forEach((rect) => {
             if(rect.rotation === -1) {
                 drawRect(rect.x, rect.y, rect.width, rect.height, rect.color)
             } else {
+                // save context of canvas
                 ctx.save()
-                ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2);            //translate center back to 0,0
-                ctx.rotate( (Math.PI / 180) * rect.rotation);  //rotate 25 degrees.
-                ctx.translate( -rect.x - rect.width / 2, -rect.y - rect.height / 2);            //translate center back to 0,0
+                // translate canvas's pointer to shape's center (center of rotation what we want)
+                ctx.translate(rect.x + rect.width / 2, rect.y + rect.height / 2)
+                // Rotate canvas pointer
+                ctx.rotate( (Math.PI / 180) * rect.rotation)
+                // translate canvas pointer to square's origin for drawing square
+                ctx.translate( -rect.x - rect.width / 2, -rect.y - rect.height / 2)
                 drawRect(rect.x, rect.y, rect.width, rect.height, rect.color)
+                // Restore canvas context (get context what was saved by ctx.save())
                 ctx.restore()
             }
         })
@@ -113,18 +115,16 @@ function animate(selectedSquare, selectedIndex){
             rects[selectedIndex].rotation += 1
         }
 
-
-        window.requestAnimationFrame(() => animate(selectedSquare, selectedIndex))
+        window.requestAnimationFrame(() => animateRotationAndDelete(selectedIndex))
     } else {
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // delete rotated square if all rotations were completed
         rects = rects.filter((rect) => {
             if(!rects.some((rect) => rect.rotation >=0 && rect.rotation <= 360)) {
                 return !(rect.rotation > 360)
             }
             return true
         })
-        console.log('rects', rects)
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
         rects.forEach((rect) => drawRect(rect.x, rect.y, rect.width, rect.height, rect.color))
     }
 
@@ -132,10 +132,9 @@ function animate(selectedSquare, selectedIndex){
 
 
 
-canvas.onmousedown = mouseDown;
-canvas.onmousemove = mouseMove;
-canvas.onmouseup = mouseUp;
-canvas.ondblclick = rotateAndDelete;
+canvas.onmousedown = mouseDown
+canvas.onmousemove = mouseMove
+canvas.onmouseup = mouseUp
+canvas.ondblclick = mouseDblClick
 
 
-//remove events ?
